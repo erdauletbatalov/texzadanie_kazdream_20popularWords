@@ -2,6 +2,7 @@ package main
 
 import (
 	"kazdream/functions/btree"
+	"kazdream/functions/validation"
 
 	"io/ioutil"
 	"os"
@@ -15,6 +16,10 @@ func main() {
 	text, err := ioutil.ReadFile(args[0])
 	if err != nil {
 		os.Stdout.Write([]byte(err.Error()))
+	}
+
+	if validation.CheckValid(text) {
+		return
 	}
 
 	// Объявляем наше Бинарное дерево,
