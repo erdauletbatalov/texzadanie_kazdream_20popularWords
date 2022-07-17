@@ -12,42 +12,40 @@ func main() {
 	if len(args) != 1 {
 		return
 	}
-
-	// text := []byte{97, 32, 231, 136, 190, 32, 97, 10, 71, 117, 116, 101, 110, 98, 101, 114, 103, 39, 83, 10, 71, 117, 116, 101, 110, 98, 101, 114, 103, 39, 115, 10, 71, 117, 116, 101, 110, 98, 101, 114, 103, 231, 136, 190, 115, 10, 71, 117, 116, 101, 110, 98, 101, 114, 103, 39, 115, 10, 71, 117, 116, 101, 110, 98, 101, 114, 103, 39, 115, 10, 71, 117, 116, 101, 110, 98, 101, 114, 103, 39, 115}
 	text, err := ioutil.ReadFile(args[0])
 	if err != nil {
 		os.Stdout.Write([]byte(err.Error()))
 	}
-	fileLen := len(text)
-	root := &TreeNode{}
+	// Объявляем наше Бинарное дерево, в котором будем хранить все найденные слова и их количество
+	dictionary := &TreeNode{}
 	temp := 0
 	for i := 0; i < len(text); i++ {
+		// Если видим начало слова
 		if isAscii(text[i]) {
 			start := i
 			for j := i; j < len(text); j++ {
+				// Итерируемся до тех пор, пока не найдем конец слова
 				if !isAscii(text[j]) {
+					// Захардкодил замую первую ноду, корневую
 					if temp == 0 {
 						root.Word = ToLower(text[start:j])
 						root.Count++
 						temp++
 						break
 					}
-					node := BTreeSearchWord(root, ToLower(text[start:j]))
+					node := BTreeSearchWord(dictionary, ToLower(text[start:j]))
 					if node == nil {
-						_ = BTreeInsertWord(root, ToLower(text[start:j]))
+						_ = BTreeInsertWordByOrder(dictionary, ToLower(text[start:j]))
 					}
-					// root = BTreeInsertAndIncrementWord(root, ToLower(text[start:j]))
-					// words = append(words, text[start:j])
 					i = j
 					break
 				}
-				if isAscii(text[j]) && j == fileLen-1 {
-					node := BTreeSearchWord(root, ToLower(text[start:]))
+				// Самый последний элемент в тексте
+				if isAscii(text[j]) && j == len(text)-1 {
+					node := BTreeSearchWord(dictionary, ToLower(text[start:]))
 					if node == nil {
-						_ = BTreeInsertWord(root, ToLower(text[start:]))
+						_ = BTreeInsertWordByOrder(dictionary, ToLower(text[start:]))
 					}
-					// root = BTreeInsertAndIncrementWord(root, ToLower(text[start:]))
-					// words = append(words, text[start:])
 					i = j
 					break
 				}
@@ -55,12 +53,18 @@ func main() {
 		}
 	}
 
-	root2 := &TreeNode{}
-	// BtreePrint(root)
-	BTreeApplyInorder(root, root2, BTreeInsertWordInfo)
+	// На данном этапе у нас имеется dictionary структура,
+	// которая по сути является корнем бинарного дерева.
+	// Каждый элемент в дереве - Нода, которая хранит слово,
+	// количество этого слова в тексте и три указателя: Родитель, левый и правый элемент.
+	// Вставка элементов в дереве dictionary производится по принципу лексикографической проверки слов.
 
-	// BtreePrint(root2)
-	BTreeApplyInorder2(root2, printFirst20)
+	frequencyTree := &TreeNode{}
+	// BtreePrint(root)
+	BTreeApplyInorder(dictionary, frequencyTree, BTreeInsertWordByFrequency)
+
+	// BtreePrint(frequencyTree)
+	BTreeApplyInorder2(frequencyTree, printFirst20)
 }
 
 func printFirst20(stopCount *int, count int, word []byte) bool {
@@ -147,30 +151,30 @@ type TreeNode struct {
 	Count               int
 }
 
-func BTreeInsertWord(bt *TreeNode, word []byte) *TreeNode {
+func BTreeInsertWordByOrder(bt *TreeNode, word []byte) *TreeNode {
 	if bt == nil {
 		return &TreeNode{Word: word, Count: 1}
 	}
 
 	if Equal(word, bt.Word) == -1 {
-		bt.Left = BTreeInsertWord(bt.Left, word)
+		bt.Left = BTreeInsertWordByOrder(bt.Left, word)
 		bt.Left.Parent = bt
 	} else if Equal(word, bt.Word) == 1 {
-		bt.Right = BTreeInsertWord(bt.Right, word)
+		bt.Right = BTreeInsertWordByOrder(bt.Right, word)
 		bt.Right.Parent = bt
 	}
 	return bt
 }
 
-func BTreeInsertWordInfo(bt *TreeNode, word []byte, count int) *TreeNode {
+func BTreeInsertWordByFrequency(bt *TreeNode, word []byte, count int) *TreeNode {
 	if bt == nil {
 		return &TreeNode{Word: word, Count: count}
 	}
 	if count >= bt.Count {
-		bt.Left = BTreeInsertWordInfo(bt.Left, word, count)
+		bt.Left = BTreeInsertWordByFrequency(bt.Left, word, count)
 		bt.Left.Parent = bt
 	} else if count < bt.Count {
-		bt.Right = BTreeInsertWordInfo(bt.Right, word, count)
+		bt.Right = BTreeInsertWordByFrequency(bt.Right, word, count)
 		bt.Right.Parent = bt
 	}
 	return bt
